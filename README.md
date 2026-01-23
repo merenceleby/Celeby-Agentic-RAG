@@ -36,8 +36,8 @@ Advanced Retrieval-Augmented Generation system with self-correction, hybrid sear
 
 1. **Clone and navigate**
 ```bash
-git clone <your-repo>
-cd rag-agent
+git clone https://github.com/merenceleby/Self-Correcting-RAG-Agent.git
+cd Self-Correcting-RAG-Agent
 ```
 
 2. **Start all services**
@@ -175,7 +175,7 @@ Access real-time metrics at http://localhost:5173:
 - Cache hit rate
 - System uptime
 
-## 🎯 FAANG Interview Highlights
+## 🎯 Project Highlights
 
 This project demonstrates:
 
@@ -244,21 +244,9 @@ TOP_K_RETRIEVAL = 10
 CHUNK_SIZE = 256
 ```
 
-## 📚 References
-
-- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
-- [ChromaDB Docs](https://docs.trychroma.com/)
-- [Sentence Transformers](https://www.sbert.net/)
-- [RAGAS Framework](https://docs.ragas.io/)
-
-## 🤝 Contributing
-
-This is a portfolio project. Feel free to fork and modify!
 
 ## 📄 License
 
-MIT License
+Apache 2.0 License
 
 ---
-
-**Built for FAANG interviews** 🚀 | Showcasing advanced RAG, system design, and production-ready code
