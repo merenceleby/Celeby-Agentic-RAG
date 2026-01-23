@@ -1,0 +1,115 @@
+services:
+  # ============================================
+  # OLLAMA PROFILES (Choose one based on your hardware)
+  # ============================================
+  
+  # CPU Profile (Default - Works on all systems)
+  # Recommended model: llama3.2:1b or gemma:2b
+  ollama-cpu:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    command: serve
+    profiles:
+      - cpu
+  
+  # NVIDIA GPU Profile (10x faster)
+  # Recommended model: phi3:mini
+  # Requires: NVIDIA GPU + Container Toolkit
+  ollama-nvidia:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    command: serve
+    profiles:
+      - nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+  
+  # AMD GPU Profile
+  # Recommended model: phi3:mini
+  # Requires: AMD GPU + ROCm drivers
+  ollama-amd:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    command: serve
+    profiles:
+      - amd
+    devices:
+      - /dev/kfd
+      - /dev/dri
+
+  # ============================================
+  # OTHER SERVICES
+  # ============================================
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: rag-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - chroma_data:/app/chroma_db
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - CHROMA_DB_PATH=/app/chroma_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    restart: unless-stopped
+    profiles:
+      - cpu
+      - nvidia
+      - amd
+
+  frontend:
+    build: ./frontend
+    container_name: rag-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    profiles:
+      - cpu
+      - nvidia
+      - amd
+
+volumes:
+  ollama_data:
+  chroma_data:
+  redis_data:
