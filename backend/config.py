@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+import os
 
 class Settings(BaseSettings):
     # Ollama Config
@@ -24,9 +25,10 @@ class Settings(BaseSettings):
     TOP_K_RERANK: int = 5
     TOP_K_BM25: int = 10
     
-    # Agent Parameters
-    MAX_CORRECTION_ATTEMPTS: int = 2
-    NUM_QUERY_VARIATIONS: int = 3
+    # Agent Parameters - FAST MODE
+    FAST_MODE: bool = os.getenv("FAST_MODE", "false").lower() == "true"
+    MAX_CORRECTION_ATTEMPTS: int = 0 if os.getenv("FAST_MODE", "false").lower() == "true" else 2
+    NUM_QUERY_VARIATIONS: int = 1 if os.getenv("FAST_MODE", "false").lower() == "true" else 3
     
     # Evaluation
     TEST_DATASET_SIZE: int = 50

@@ -50,8 +50,67 @@
 
 .admin-section h2 {
   color: #2d3748;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
   font-size: 1.5rem;
+}
+
+.section-header {
+  margin-bottom: 1.5rem;
+}
+
+.section-desc {
+  color: #718096;
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+}
+
+.info-box {
+  background: #edf2f7;
+  border-left: 4px solid #667eea;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.info-box strong {
+  color: #2d3748;
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+}
+
+.info-box p {
+  color: #4a5568;
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+.info-box ol, .info-box ul {
+  margin-left: 1.5rem;
+  color: #4a5568;
+  line-height: 1.8;
+}
+
+.info-box li {
+  margin-bottom: 0.5rem;
+}
+
+.evaluation-summary {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f7fafc;
+  border-radius: 8px;
+}
+
+.evaluation-summary strong {
+  color: #2d3748;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.evaluation-summary p {
+  color: #4a5568;
+  line-height: 1.6;
 }
 
 .metrics-grid {
@@ -61,12 +120,24 @@
   margin-bottom: 1.5rem;
 }
 
+.metrics-grid.small {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
 .metric-card {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 1.5rem;
   border-radius: 8px;
   color: white;
   text-align: center;
+}
+
+.metric-card.success-card {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+}
+
+.metric-card.danger-card {
+  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
 }
 
 .metric-label {
@@ -80,6 +151,12 @@
 .metric-value {
   font-size: 2rem;
   font-weight: bold;
+}
+
+.metric-desc {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  margin-top: 0.5rem;
 }
 
 .admin-btn {
@@ -111,6 +188,11 @@
 .admin-btn.secondary:hover:not(:disabled) {
   background: #667eea;
   color: white;
+}
+
+.admin-btn.large {
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
 }
 
 .admin-btn:disabled {

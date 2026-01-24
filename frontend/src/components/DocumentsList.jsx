@@ -4,7 +4,7 @@ import './DocumentsList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-function DocumentsList({ onDocumentChange }) {
+function DocumentsList({ onDocumentChange, refreshTrigger }) {
   const [documents, setDocuments] = useState([])
   const [loading, setLoading] = useState(false)
 
@@ -19,19 +19,19 @@ function DocumentsList({ onDocumentChange }) {
 
   useEffect(() => {
     fetchDocuments()
-  }, [])
+  }, [refreshTrigger])
 
   const handleDelete = async (filename) => {
-    if (!confirm(`Delete "${filename}"?`)) return
+    if (!confirm(`Delete "${filename}"?\n\nThis will remove it from the database and all related chunks.`)) return
 
     try {
       setLoading(true)
       await axios.delete(`${API_URL}/api/documents/${encodeURIComponent(filename)}`)
       await fetchDocuments()
       if (onDocumentChange) onDocumentChange()
-      alert(`Document "${filename}" deleted successfully!`)
+      alert(`✅ Document "${filename}" deleted successfully!`)
     } catch (error) {
-      alert('Delete failed: ' + (error.response?.data?.detail || error.message))
+      alert('❌ Delete failed: ' + (error.response?.data?.detail || error.message))
     } finally {
       setLoading(false)
     }
@@ -39,7 +39,17 @@ function DocumentsList({ onDocumentChange }) {
 
   return (
     <div className="documents-list">
-      <h2>📄 Uploaded Documents</h2>
+      <div className="documents-header">
+        <h2>📄 Uploaded Documents</h2>
+        <button 
+          className="refresh-btn" 
+          onClick={fetchDocuments}
+          disabled={loading}
+          title="Refresh list"
+        >
+          🔄
+        </button>
+      </div>
       
       {documents.length === 0 ? (
         <div className="empty-state">

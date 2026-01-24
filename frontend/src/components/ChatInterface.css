@@ -272,6 +272,65 @@
   margin: 0;
 }
 
+.source-citation {
+  color: #667eea;
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.feedback-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.feedback-btn {
+  background: none;
+  border: 2px solid #e2e8f0;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.feedback-btn:hover {
+  transform: scale(1.1);
+}
+
+.feedback-btn.like:hover {
+  border-color: #48bb78;
+  background: rgba(72, 187, 120, 0.1);
+}
+
+.feedback-btn.dislike:hover {
+  border-color: #f56565;
+  background: rgba(245, 101, 101, 0.1);
+}
+
+.feedback-indicator {
+  margin-top: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  display: inline-block;
+}
+
+.feedback-indicator.liked {
+  background: rgba(72, 187, 120, 0.2);
+  color: #38a169;
+}
+
+.feedback-indicator.disliked {
+  background: rgba(245, 101, 101, 0.2);
+  color: #e53e3e;
+}
+
 .chat-input {
   padding: 1rem;
   border-top: 2px solid #f0f0f0;

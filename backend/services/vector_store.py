@@ -53,8 +53,9 @@ class VectorStore:
         logger.info("pdf_loading_complete", total_chunks=len(all_documents))
     
     def _process_pdf(self, pdf_path: str) -> List[Dict]:
-        """Process a single PDF file"""
-        logger.info("processing_pdf", file=os.path.basename(pdf_path))
+        """Process a single PDF file - OPTIMIZED"""
+        filename = os.path.basename(pdf_path)
+        logger.info("processing_pdf", file=filename)
         
         try:
             reader = PdfReader(pdf_path)
@@ -67,6 +68,10 @@ class VectorStore:
         ids = []
         documents = []
         
+        total_pages = len(reader.pages)
+        logger.info("pdf_total_pages", file=filename, pages=total_pages)
+        
+        # Extract all text first
         for page_num, page in enumerate(reader.pages):
             try:
                 text = page.extract_text()
@@ -76,19 +81,16 @@ class VectorStore:
                 page_chunks = self._chunk_text(text)
                 
                 for i, chunk in enumerate(page_chunks):
-                    chunk_id = f"{os.path.basename(pdf_path)}_p{page_num}_c{i}"
+                    chunk_id = f"{filename}_p{page_num}_c{i}"
+                    
+                    # Store chunk WITHOUT citation first (faster)
                     chunks.append(chunk)
                     metadatas.append({
-                        "source": os.path.basename(pdf_path),
-                        "page": page_num,
+                        "source": filename,
+                        "page": page_num + 1,
                         "chunk_index": i
                     })
                     ids.append(chunk_id)
-                    documents.append({
-                        "text": chunk,
-                        "metadata": metadatas[-1],
-                        "id": chunk_id
-                    })
             except Exception as e:
                 logger.error("page_extract_error",
                            file=pdf_path,
@@ -96,17 +98,38 @@ class VectorStore:
                            error=str(e))
                 continue
         
-        if chunks:
-            embeddings = embedding_service.embed_batch(chunks)
-            self.collection.add(
-                embeddings=embeddings,
-                documents=chunks,
-                metadatas=metadatas,
-                ids=ids
-            )
-            logger.info("pdf_indexed",
-                       file=os.path.basename(pdf_path),
-                       chunks=len(chunks))
+        if not chunks:
+            logger.warning("no_chunks_extracted", file=filename)
+            return []
+        
+        # Batch embedding (FAST)
+        logger.info("embedding_start", file=filename, chunks=len(chunks))
+        embeddings = embedding_service.embed_batch(chunks)
+        
+        # Add citations AFTER embedding, before storing
+        cited_chunks = []
+        for chunk, meta in zip(chunks, metadatas):
+            cited_chunk = f"[Source: {meta['source']}, Page: {meta['page']}]\n\n{chunk}"
+            cited_chunks.append(cited_chunk)
+            documents.append({
+                "text": cited_chunk,
+                "metadata": meta,
+                "id": ids[len(documents)]
+            })
+        
+        # Store in ChromaDB
+        logger.info("chromadb_insert", file=filename, chunks=len(cited_chunks))
+        self.collection.add(
+            embeddings=embeddings,
+            documents=cited_chunks,
+            metadatas=metadatas,
+            ids=ids
+        )
+        
+        logger.info("pdf_indexed_success",
+                   file=filename,
+                   chunks=len(chunks),
+                   pages=total_pages)
         
         return documents
     

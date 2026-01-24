@@ -10,6 +10,7 @@ function ChatInterface({ onDocumentChange }) {
   const [loading, setLoading] = useState(false)
   const [file, setFile] = useState(null)
   const [streamingMessage, setStreamingMessage] = useState('')
+  const [fastMode, setFastMode] = useState(false)
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -23,7 +24,7 @@ function ChatInterface({ onDocumentChange }) {
   const handleSend = async () => {
     if (!input.trim()) return
 
-    const userMessage = { role: 'user', content: input }
+    const userMessage = { role: 'user', content: input, timestamp: Date.now() }
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setLoading(true)
@@ -77,6 +78,10 @@ function ChatInterface({ onDocumentChange }) {
               } else if (data.type === 'metadata') {
                 sources = data.content.sources
                 metadata = data.content
+              } else if (data.type === 'answer' && data.done) {
+                // Handle full answer (when no docs found)
+                streamedAnswer = data.content
+                setStreamingMessage(streamedAnswer)
               }
             } catch (e) {
               console.error('Parse error:', e)
@@ -105,6 +110,41 @@ function ChatInterface({ onDocumentChange }) {
     }
   }
 
+  const handleFeedback = async (messageIndex, feedback) => {
+    const message = messages[messageIndex]
+    
+    try {
+      await axios.post(`${API_URL}/api/feedback`, {
+        query: messages[messageIndex - 1]?.content || '',
+        answer: message.content,
+        feedback: feedback,
+        sources: message.sources || [],
+        response_time_ms: message.responseTime || 0
+      })
+      
+      // Update message with feedback
+      setMessages(prev => prev.map((msg, idx) => 
+        idx === messageIndex ? { ...msg, userFeedback: feedback } : msg
+      ))
+      
+      if (feedback === 0) {
+        // Dislike - Regenerate
+        if (confirm('⚠️ Regenerate answer with different approach?')) {
+          const originalQuery = messages[messageIndex - 1]?.content
+          if (originalQuery) {
+            setLoading(true)
+            await handleStreamingQuery(originalQuery, Date.now())
+            setLoading(false)
+          }
+        }
+      } else {
+        alert('✅ Thank you for your feedback!')
+      }
+    } catch (error) {
+      alert('Failed to submit feedback: ' + error.message)
+    }
+  }
+
   const handleUpload = async () => {
     if (!file) return
 
@@ -114,11 +154,11 @@ function ChatInterface({ onDocumentChange }) {
     try {
       setLoading(true)
       const response = await axios.post(`${API_URL}/api/upload`, formData)
-      alert(`Document "${file.name}" uploaded and indexed!\n${response.data.chunks} chunks created.`)
+      alert(`✅ Document "${file.name}" uploaded and indexed!\n📦 ${response.data.chunks} chunks created.`)
       setFile(null)
       if (onDocumentChange) onDocumentChange()
     } catch (error) {
-      alert('Upload failed: ' + (error.response?.data?.detail || error.message))
+      alert('❌ Upload failed: ' + (error.response?.data?.detail || error.message))
     } finally {
       setLoading(false)
     }
@@ -138,12 +178,49 @@ function ChatInterface({ onDocumentChange }) {
             📤 Upload & Index PDF
           </button>
         </div>
+        
+        <div className="control-group">
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={fastMode}
+              onChange={(e) => setFastMode(e.target.checked)}
+            />
+            <span>⚡ Fast Mode {fastMode ? '(Active - No self-correction)' : '(Quality mode)'}</span>
+          </label>
+        </div>
       </div>
 
       <div className="chat-messages">
         {messages.map((msg, idx) => (
           <div key={idx} className={`message ${msg.role}`}>
             <div className="message-content">{msg.content}</div>
+            
+            {msg.role === 'assistant' && !msg.userFeedback && (
+              <div className="feedback-buttons">
+                <button 
+                  className="feedback-btn like"
+                  onClick={() => handleFeedback(idx, 1)}
+                  title="Good answer"
+                >
+                  👍
+                </button>
+                <button 
+                  className="feedback-btn dislike"
+                  onClick={() => handleFeedback(idx, 0)}
+                  title="Bad answer - Regenerate"
+                >
+                  👎
+                </button>
+              </div>
+            )}
+            
+            {msg.userFeedback === 1 && (
+              <div className="feedback-indicator liked">✅ You liked this</div>
+            )}
+            {msg.userFeedback === 0 && (
+              <div className="feedback-indicator disliked">👎 You disliked this</div>
+            )}
             
             {msg.corrected && (
               <div className="correction-badge">
@@ -173,12 +250,38 @@ function ChatInterface({ onDocumentChange }) {
             {msg.sources && msg.sources.length > 0 && (
               <details className="sources">
                 <summary>📚 Sources ({msg.sources.length})</summary>
-                {msg.sources.map((src, i) => (
-                  <div key={i} className="source">
-                    <strong>Source {i + 1}:</strong>
-                    <p>{src.substring(0, 300)}...</p>
-                  </div>
-                ))}
+                {msg.sources.map((src, i) => {
+                  let filename = 'Document';
+                  let page = '?';
+
+                  const fileMatch = src.match(/(?:Source|File|Doc):\s*([^,\]\n]+)/i) 
+                                || src.match(/([a-zA-Z0-9_\-\s]+\.pdf)/i);
+                  
+                  if (fileMatch) {
+                    filename = fileMatch[1].trim();
+                  }
+
+                  const pageMatch = src.match(/(?:Page|Sayfa|p\.?)\s*[:#-]?\s*(\d+)/i)
+                                || src.match(/---\s*PAGE\s*(\d+)\s*---/i);
+                  
+                  if (pageMatch) {
+                    page = pageMatch[1];
+                  }
+
+                  const cleanText = src.replace(/\[Source:.*?\]/g, '')
+                                      .replace(/---\s*PAGE\s*\d+\s*---/gi, '')
+                                      .trim()
+                                      .substring(0, 300);
+
+                  return (
+                    <div key={i} className="source">
+                      <strong className="source-citation">
+                        📄 [{filename.length > 25 ? filename.substring(0,22)+'...' : filename} - P.{page}]
+                      </strong>
+                      <p>{cleanText}...</p>
+                    </div>
+                  )
+                })}
               </details>
             )}
           </div>
@@ -198,7 +301,7 @@ function ChatInterface({ onDocumentChange }) {
               <span></span>
               <span></span>
             </div>
-            <span>Thinking...</span>
+            <span>Processing...</span>
           </div>
         )}
         

@@ -87,7 +87,7 @@ Provide {settings.NUM_QUERY_VARIATIONS} variations, one per line, without number
         return state
     
     async def _retrieve(self, state: AgentState) -> AgentState:
-        """Retrieve documents using hybrid search"""
+        """Retrieve documents using hybrid search with parallel queries"""
         logger.info("agent_step", step="retrieve")
         
         # Check cache first
@@ -101,10 +101,17 @@ Provide {settings.NUM_QUERY_VARIATIONS} variations, one per line, without number
         
         all_docs = set()
         
-        # Retrieve for each query variation
-        for query in state["rewritten_queries"]:
-            results = vector_store.hybrid_search(query, top_k=settings.TOP_K_RETRIEVAL // len(state["rewritten_queries"]))
-            all_docs.update(results["documents"])
+        # Parallel retrieval for each query variation
+        import asyncio
+        
+        async def retrieve_single(query):
+            return vector_store.hybrid_search(query, top_k=settings.TOP_K_RETRIEVAL // len(state["rewritten_queries"]))
+        
+        # Run all queries in parallel
+        results = await asyncio.gather(*[retrieve_single(q) for q in state["rewritten_queries"]])
+        
+        for result in results:
+            all_docs.update(result["documents"])
         
         # Convert to list and limit
         unique_docs = list(all_docs)[:settings.TOP_K_RETRIEVAL]
@@ -113,7 +120,9 @@ Provide {settings.NUM_QUERY_VARIATIONS} variations, one per line, without number
         # Cache the results
         cache_service.set(cache_key, unique_docs)
         
-        logger.info("retrieval_complete", num_docs=len(unique_docs))
+        logger.info("retrieval_complete", 
+                   num_docs=len(unique_docs),
+                   parallel_queries=len(state["rewritten_queries"]))
         
         return state
     
@@ -306,28 +315,45 @@ Respond with ONLY "YES" or "NO":"""
         state = await self._retrieve(state)
         state = await self._rerank(state)
         
-        # Stream generation
-        if not state["ranked_docs"]:
+        # Check if any relevant docs found
+        if not state["ranked_docs"] or len(state["ranked_docs"]) == 0:
             yield {
                 "type": "answer",
-                "content": "I couldn't find relevant information to answer your question.",
+                "content": "I cannot find this information in the provided documents.",
+                "done": True
+            }
+            
+            response_time = (time.time() - start_time) * 1000
+            yield {
+                "type": "metadata",
+                "content": {
+                    "sources": [],
+                    "retrieval_score": 0.0,
+                    "response_time_ms": response_time
+                },
                 "done": True
             }
             return
         
         context = "\n\n".join(state["ranked_docs"])
         
-        prompt = f"""Based on the following context, answer the question accurately and concisely.
+        system_prompt = """You are a precise document assistant. Your ONLY job is to answer questions based on the provided context.
 
-Context:
+STRICT RULES:
+1. If the answer is NOT in the context, you MUST respond: "I cannot find this information in the provided documents."
+2. NEVER use your general knowledge or training data.
+3. NEVER make assumptions or inferences beyond what's explicitly stated.
+4. If unsure, say you cannot find the information."""
+        
+        prompt = f"""Context from documents:
 {context}
 
 Question: {state['query']}
 
-Answer:"""
+Answer based ONLY on the context above (follow the strict rules):"""
         
         # Stream the answer
-        async for chunk in llm_service.generate_stream(prompt):
+        async for chunk in llm_service.generate_stream(prompt, system_prompt=system_prompt):
             yield {
                 "type": "answer_chunk",
                 "content": chunk,

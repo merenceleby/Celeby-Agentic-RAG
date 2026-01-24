@@ -4,10 +4,10 @@ import DocumentsList from './components/DocumentsList'
 import './App.css'
 
 function App() {
-  const [documentUpdate, setDocumentUpdate] = useState(0)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   const handleDocumentChange = () => {
-    setDocumentUpdate(prev => prev + 1)
+    setRefreshTrigger(prev => prev + 1)
   }
 
   return (
@@ -15,17 +15,20 @@ function App() {
       <header className="app-header">
         <h1>🤖 Self-Correcting RAG Agent</h1>
         <p className="subtitle">Advanced RAG with Query Rewriting, Hybrid Search & Re-ranking</p>
-{/*         <div className="tech-stack">
+        <div className="tech-stack">
           <span className="tech-badge">Phi-3 Mini</span>
           <span className="tech-badge">LangGraph</span>
           <span className="tech-badge">ChromaDB</span>
           <span className="tech-badge">Cross-Encoder</span>
           <span className="tech-badge">BM25</span>
-        </div> */}
+        </div>
       </header>
       
       <div className="app-container">
-        <DocumentsList onDocumentChange={handleDocumentChange} key={documentUpdate} />
+        <DocumentsList 
+          onDocumentChange={handleDocumentChange} 
+          refreshTrigger={refreshTrigger}
+        />
         <ChatInterface onDocumentChange={handleDocumentChange} />
       </div>
     </div>
