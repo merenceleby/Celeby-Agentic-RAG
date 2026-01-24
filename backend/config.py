@@ -18,17 +18,21 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
     RERANKER_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     
-    # RAG Parameters
+    # RAG Parameters - OPTIMIZED FOR QUALITY
     CHUNK_SIZE: int = 512
-    CHUNK_OVERLAP: int = 50
-    TOP_K_RETRIEVAL: int = 20
+    CHUNK_OVERLAP: int = 100  # Increased for better context
+    TOP_K_RETRIEVAL: int = 15  # Reduced to focus on best matches
     TOP_K_RERANK: int = 5
     TOP_K_BM25: int = 10
+    RERANK_THRESHOLD: float = -2.0  # Stricter threshold
     
-    # Agent Parameters - FAST MODE
+    # Agent Parameters - MODE BASED
     FAST_MODE: bool = os.getenv("FAST_MODE", "false").lower() == "true"
     MAX_CORRECTION_ATTEMPTS: int = 0 if os.getenv("FAST_MODE", "false").lower() == "true" else 2
     NUM_QUERY_VARIATIONS: int = 1 if os.getenv("FAST_MODE", "false").lower() == "true" else 3
+    
+    # Search Mode: local, web, auto
+    SEARCH_MODE: str = os.getenv("SEARCH_MODE", "local")
     
     # Evaluation
     TEST_DATASET_SIZE: int = 50

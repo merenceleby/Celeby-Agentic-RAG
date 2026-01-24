@@ -224,6 +224,23 @@ function AdminPanel() {
                 <div className="metric-desc">Users who liked answers</div>
               </div>
             </div>
+            
+            <button 
+              className="admin-btn secondary" 
+              onClick={async () => {
+                if (confirm('Reset all feedback data?')) {
+                  try {
+                    await axios.post(`${API_URL}/api/feedback/reset`)
+                    fetchAllData()
+                    alert('✅ Feedback reset successfully!')
+                  } catch (error) {
+                    alert('❌ Reset failed: ' + error.message)
+                  }
+                }
+              }}
+            >
+              🔄 Reset Feedback
+            </button>
           </section>
         )}
 

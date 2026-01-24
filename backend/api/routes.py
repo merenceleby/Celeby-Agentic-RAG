@@ -340,6 +340,27 @@ async def get_feedback_stats():
         logger.error("feedback_stats_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/feedback/reset")
+async def reset_feedback():
+    """Reset all feedback data"""
+    try:
+        import os
+        feedback_db_path = "/app/feedback.db"
+        
+        if os.path.exists(feedback_db_path):
+            os.remove(feedback_db_path)
+            logger.info("feedback_db_deleted")
+        
+        # Reinitialize
+        from services.feedback import FeedbackService
+        global feedback_service
+        feedback_service = FeedbackService()
+        
+        return {"message": "Feedback reset successfully"}
+    except Exception as e:
+        logger.error("feedback_reset_error", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/evaluation/generate-dataset")
 async def generate_test_dataset(n_questions: int = 20):
     """Generate synthetic test dataset from indexed documents"""

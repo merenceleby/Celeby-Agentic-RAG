@@ -92,8 +92,8 @@ JSON:"""
         Returns:
             Score between 0 and 1
         """
-        prompt = f"""Evaluate if the answer is faithful to the provided context. 
-An answer is faithful if all claims in the answer can be verified from the context.
+        prompt = f"""You are evaluating if an answer is faithful to the provided context.
+An answer is faithful if EVERY claim in the answer can be verified from the context.
 
 Context:
 {context}
@@ -101,10 +101,17 @@ Context:
 Question: {question}
 Answer: {answer}
 
-Respond with a score between 0.0 (not faithful) and 1.0 (completely faithful).
-Respond ONLY with the number, nothing else.
+Evaluate STRICTLY:
+- Check EACH statement in the answer
+- Can EVERY statement be found in the context?
+- Ignore minor rephrasing, focus on factual accuracy
 
-Score:"""
+Score 1.0: All claims are in context
+Score 0.7-0.9: Most claims are in context
+Score 0.4-0.6: Some claims are in context
+Score 0.0-0.3: Most claims are NOT in context
+
+Respond with ONLY a number between 0.0 and 1.0:"""
         
         response = await llm_service.generate(prompt)
         

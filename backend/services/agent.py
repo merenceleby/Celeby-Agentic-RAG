@@ -168,14 +168,15 @@ STRICT RULES:
 1. If the answer is NOT in the context, you MUST respond: "I cannot find this information in the provided documents."
 2. NEVER use your general knowledge or training data.
 3. NEVER make assumptions or inferences beyond what's explicitly stated.
-4. If unsure, say you cannot find the information."""
+4. If unsure, say you cannot find the information.
+5. ALWAYS follow user's formatting instructions (e.g., "in 1 sentence", "as a list", etc.)"""
         
         prompt = f"""Context from documents:
 {context}
 
-Question: {state['query']}
+User Question: {state['query']}
 
-Answer based ONLY on the context above (follow the strict rules):"""
+Answer based ONLY on the context above. Follow the strict rules AND respect any formatting requests in the user's question:"""
         
         answer = await llm_service.generate(prompt, system_prompt=system_prompt)
         state["answer"] = answer.strip()
