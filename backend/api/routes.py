@@ -25,6 +25,10 @@ async def query_documents(request: QueryRequest):
         # Run agent
         result = await rag_agent.run(request.query)
         
+        # If no relevant docs found, override answer
+        if not result["sources"] or len(result["sources"]) == 0:
+            result["answer"] = "I cannot find this information in the provided documents."
+        
         # Track metrics
         metrics_tracker.record_query(
             query=request.query,
@@ -80,7 +84,7 @@ async def query_stream(request: QueryRequest):
 
 @router.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
-    """Upload and index a PDF document"""
+    """Upload and automatically index a PDF document"""
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
     
@@ -95,14 +99,22 @@ async def upload_document(file: UploadFile = File(...)):
         with open(file_path, "wb") as f:
             f.write(contents)
         
-        # Process and index
-        vector_store._process_pdf(file_path)
+        # Process and index immediately
+        documents = vector_store._process_pdf(file_path)
         
-        logger.info("upload_complete", filename=file.filename)
+        # Re-index BM25 with all documents
+        all_docs = vector_store.get_all_documents()
+        from services.bm25_search import bm25_service
+        bm25_service.index_documents(all_docs)
+        
+        logger.info("upload_complete", 
+                   filename=file.filename,
+                   chunks=len(documents))
         
         return {
             "message": f"Document '{file.filename}' uploaded and indexed successfully",
-            "filename": file.filename
+            "filename": file.filename,
+            "chunks": len(documents)
         }
         
     except Exception as e:
@@ -199,3 +211,81 @@ async def health_check():
         "status": "healthy",
         "service": "rag-agent"
     }
+
+@router.get("/documents")
+async def get_documents():
+    """Get list of uploaded documents"""
+    try:
+        import os
+        docs_dir = "/app/data/documents"
+        
+        if not os.path.exists(docs_dir):
+            return {"documents": []}
+        
+        files = [f for f in os.listdir(docs_dir) if f.endswith('.pdf')]
+        
+        documents = []
+        for filename in files:
+            file_path = os.path.join(docs_dir, filename)
+            
+            # Get chunk count from vector store
+            results = vector_store.collection.get(
+                where={"source": filename}
+            )
+            chunk_count = len(results['ids']) if results else 0
+            
+            documents.append({
+                "name": filename,
+                "chunks": chunk_count
+            })
+        
+        logger.info("documents_listed", count=len(documents))
+        
+        return {"documents": documents}
+        
+    except Exception as e:
+        logger.error("get_documents_error", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/documents/{filename}")
+async def delete_document(filename: str):
+    """Delete a document and remove from vector store"""
+    try:
+        import os
+        from urllib.parse import unquote
+        
+        filename = unquote(filename)
+        file_path = f"/app/data/documents/{filename}"
+        
+        # Delete from vector store
+        try:
+            vector_store.collection.delete(
+                where={"source": filename}
+            )
+            logger.info("document_deleted_from_vectorstore", filename=filename)
+        except Exception as e:
+            logger.warning("vectorstore_delete_warning", filename=filename, error=str(e))
+        
+        # Delete from BM25 (re-index remaining documents)
+        from services.bm25_search import bm25_service
+        remaining_docs = vector_store.get_all_documents()
+        if remaining_docs:
+            bm25_service.index_documents(remaining_docs)
+        else:
+            bm25_service.corpus = []
+            bm25_service.tokenized_corpus = []
+            bm25_service.bm25 = None
+        
+        # Delete file
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logger.info("document_file_deleted", filename=filename)
+        
+        return {
+            "message": f"Document '{filename}' deleted successfully",
+            "filename": filename
+        }
+        
+    except Exception as e:
+        logger.error("delete_document_error", filename=filename, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))

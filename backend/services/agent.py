@@ -153,17 +153,22 @@ Provide {settings.NUM_QUERY_VARIATIONS} variations, one per line, without number
         
         context = "\n\n".join(state["ranked_docs"])
         
-        prompt = f"""Based on the following context, answer the question accurately and concisely.
-Only use information from the provided context. If the context doesn't contain enough information, say so.
+        system_prompt = """You are a precise document assistant. Your ONLY job is to answer questions based on the provided context.
 
-Context:
+STRICT RULES:
+1. If the answer is NOT in the context, you MUST respond: "I cannot find this information in the provided documents."
+2. NEVER use your general knowledge or training data.
+3. NEVER make assumptions or inferences beyond what's explicitly stated.
+4. If unsure, say you cannot find the information."""
+        
+        prompt = f"""Context from documents:
 {context}
 
 Question: {state['query']}
 
-Answer:"""
+Answer based ONLY on the context above (follow the strict rules):"""
         
-        answer = await llm_service.generate(prompt)
+        answer = await llm_service.generate(prompt, system_prompt=system_prompt)
         state["answer"] = answer.strip()
         
         logger.info("generation_complete", answer_length=len(answer))
@@ -180,6 +185,27 @@ Answer:"""
             return state
         
         context = "\n\n".join(state["ranked_docs"])
+        
+        # First check: Is the answer actually in the context?
+        check_prompt = f"""Does the following context contain information to answer this question?
+
+Context:
+{context[:1000]}
+
+Question: {state['query']}
+
+Respond with ONLY "YES" or "NO":"""
+        
+        context_check = await llm_service.generate(check_prompt)
+        
+        if "NO" in context_check.upper():
+            state["answer"] = "I cannot find this information in the provided documents."
+            state["is_correct"] = True  # Don't retry, this is correct behavior
+            state["correction_reason"] = "Information not in documents"
+            logger.info("validation_no_info_in_docs", query=state['query'])
+            return state
+        
+        # Second check: Quality validation
         validation = await llm_service.check_answer_quality(
             state["query"],
             state["answer"],

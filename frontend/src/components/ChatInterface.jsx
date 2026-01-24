@@ -4,13 +4,12 @@ import './ChatInterface.css'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-function ChatInterface({ onMetricsUpdate, onQueryComplete }) {
+function ChatInterface({ onDocumentChange }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [file, setFile] = useState(null)
   const [streamingMessage, setStreamingMessage] = useState('')
-  const [useStreaming, setUseStreaming] = useState(true)
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -32,11 +31,7 @@ function ChatInterface({ onMetricsUpdate, onQueryComplete }) {
     const startTime = Date.now()
 
     try {
-      if (useStreaming) {
-        await handleStreamingQuery(input, startTime)
-      } else {
-        await handleRegularQuery(input, startTime)
-      }
+      await handleStreamingQuery(input, startTime)
     } catch (error) {
       setMessages(prev => [...prev, {
         role: 'error',
@@ -47,82 +42,67 @@ function ChatInterface({ onMetricsUpdate, onQueryComplete }) {
     }
   }
 
-  const handleRegularQuery = async (query, startTime) => {
-    const response = await axios.post(`${API_URL}/api/query`, { query })
-    const responseTime = Date.now() - startTime
-
-    const botMessage = {
-      role: 'assistant',
-      content: response.data.answer,
-      sources: response.data.sources,
-      corrected: response.data.was_corrected,
-      attempts: response.data.correction_attempts,
-      retrievalScore: response.data.retrieval_score,
-      responseTime: response.data.response_time_ms,
-      metadata: response.data.metadata
-    }
-
-    setMessages(prev => [...prev, botMessage])
-    onMetricsUpdate(response.data.was_corrected, responseTime)
-    onQueryComplete()
-  }
-
   const handleStreamingQuery = async (query, startTime) => {
-    const response = await fetch(`${API_URL}/api/query-stream`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query })
-    })
+    try {
+      const response = await fetch(`${API_URL}/api/query-stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query })
+      })
 
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
 
-    let streamedAnswer = ''
-    let sources = []
-    let metadata = {}
+      let streamedAnswer = ''
+      let sources = []
+      let metadata = {}
 
-    while (true) {
-      const { value, done } = await reader.read()
-      if (done) break
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
 
-      const chunk = decoder.decode(value)
-      const lines = chunk.split('\n')
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
 
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.slice(6))
-            
-            if (data.type === 'answer_chunk') {
-              streamedAnswer += data.content
-              setStreamingMessage(streamedAnswer)
-            } else if (data.type === 'metadata') {
-              sources = data.content.sources
-              metadata = data.content
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              
+              if (data.type === 'answer_chunk') {
+                streamedAnswer += data.content
+                setStreamingMessage(streamedAnswer)
+              } else if (data.type === 'metadata') {
+                sources = data.content.sources
+                metadata = data.content
+              }
+            } catch (e) {
+              console.error('Parse error:', e)
             }
-          } catch (e) {
-            console.error('Parse error:', e)
           }
         }
       }
+
+      const responseTime = Date.now() - startTime
+
+      const botMessage = {
+        role: 'assistant',
+        content: streamedAnswer,
+        sources: sources,
+        responseTime: responseTime,
+        metadata: metadata
+      }
+
+      setMessages(prev => [...prev, botMessage])
+      setStreamingMessage('')
+    } catch (error) {
+      setMessages(prev => [...prev, {
+        role: 'error',
+        content: 'Error: ' + (error.message || 'Streaming failed')
+      }])
     }
-
-    const responseTime = Date.now() - startTime
-
-    const botMessage = {
-      role: 'assistant',
-      content: streamedAnswer,
-      sources: sources,
-      responseTime: responseTime,
-      metadata: metadata
-    }
-
-    setMessages(prev => [...prev, botMessage])
-    setStreamingMessage('')
-    onMetricsUpdate(false, responseTime)
-    onQueryComplete()
   }
 
   const handleUpload = async () => {
@@ -133,55 +113,12 @@ function ChatInterface({ onMetricsUpdate, onQueryComplete }) {
 
     try {
       setLoading(true)
-      await axios.post(`${API_URL}/api/upload`, formData)
-      alert(`Document "${file.name}" uploaded successfully!`)
+      const response = await axios.post(`${API_URL}/api/upload`, formData)
+      alert(`Document "${file.name}" uploaded and indexed!\n${response.data.chunks} chunks created.`)
       setFile(null)
+      if (onDocumentChange) onDocumentChange()
     } catch (error) {
       alert('Upload failed: ' + (error.response?.data?.detail || error.message))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleInitialize = async () => {
-    try {
-      setLoading(true)
-      await axios.post(`${API_URL}/api/initialize`)
-      alert('Database initialized successfully!')
-      onQueryComplete()
-    } catch (error) {
-      alert('Initialization failed: ' + (error.response?.data?.detail || error.message))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleGenerateDataset = async () => {
-    try {
-      setLoading(true)
-      const response = await axios.post(`${API_URL}/api/evaluation/generate-dataset`, null, {
-        params: { n_questions: 20 }
-      })
-      alert(`Generated ${response.data.dataset.length} test cases!`)
-      console.log('Test dataset:', response.data.dataset)
-    } catch (error) {
-      alert('Dataset generation failed: ' + (error.response?.data?.detail || error.message))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleRunEvaluation = async () => {
-    try {
-      setLoading(true)
-      const response = await axios.post(`${API_URL}/api/evaluation/run`)
-      
-      const results = response.data
-      alert(`Evaluation Complete!\n\nFaithfulness: ${(results.avg_faithfulness * 100).toFixed(1)}%\nRelevancy: ${(results.avg_relevancy * 100).toFixed(1)}%\nRecall: ${(results.avg_recall * 100).toFixed(1)}%`)
-      
-      console.log('Evaluation results:', results)
-    } catch (error) {
-      alert('Evaluation failed: ' + (error.response?.data?.detail || error.message))
     } finally {
       setLoading(false)
     }
@@ -198,23 +135,9 @@ function ChatInterface({ onMetricsUpdate, onQueryComplete }) {
             disabled={loading}
           />
           <button onClick={handleUpload} disabled={!file || loading}>
-            📤 Upload PDF
+            📤 Upload & Index PDF
           </button>
         </div>
-        
-        <div className="control-group">
-          <button onClick={handleInitialize} disabled={loading}>
-            🔄 Initialize DB
-          </button>
-          <button onClick={handleGenerateDataset} disabled={loading}>
-            📊 Generate Dataset
-          </button>
-          <button onClick={handleRunEvaluation} disabled={loading}>
-            ✅ Run Evaluation
-          </button>
-        </div>
-
-
       </div>
 
       <div className="chat-messages">

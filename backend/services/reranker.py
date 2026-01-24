@@ -19,7 +19,7 @@ class RerankerService:
                    model=settings.RERANKER_MODEL,
                    status="ready")
     
-    def rerank(self, query: str, documents: List[str], top_k: int = None) -> List[Tuple[str, float]]:
+    def rerank(self, query: str, documents: List[str], top_k: int = None, threshold: float = -5.0) -> List[Tuple[str, float]]:
         """
         Re-rank documents using cross-encoder
         
@@ -27,6 +27,7 @@ class RerankerService:
             query: Search query
             documents: List of documents to rerank
             top_k: Number of top documents to return
+            threshold: Minimum score threshold (default: -5.0, lower = less strict)
             
         Returns:
             List of (document, score) tuples sorted by relevance
@@ -50,9 +51,14 @@ class RerankerService:
             reverse=True
         )
         
+        # Filter by threshold
+        ranked = [(doc, score) for doc, score in ranked if score > threshold]
+        
         logger.info("rerank_completed",
                    num_docs=len(documents),
                    top_k=top_k,
+                   threshold=threshold,
+                   filtered_count=len(ranked),
                    top_score=float(ranked[0][1]) if ranked else 0)
         
         return ranked[:top_k]
