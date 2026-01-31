@@ -9,7 +9,7 @@ function AdminPanel() {
   const [feedbackStats, setFeedbackStats] = useState(null)
   const [evaluationResult, setEvaluationResult] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [datasetSize, setDatasetSize] = useState(20)
+  const [testCaseCount, setTestCaseCount] = useState(20)
 
   useEffect(() => {
     fetchAllData()
@@ -41,13 +41,13 @@ function AdminPanel() {
   }
 
   const handleGenerateDataset = async () => {
-    if (!confirm(`Generate ${datasetSize} test cases from your documents?\n\n` +
+    if (!confirm(`Generate ${testCaseCount} test cases from your documents?\n\n` +
                  `This will create question-answer pairs for testing.`)) return
 
     try {
       setLoading(true)
       const response = await axios.post(
-        `${API_URL}/api/evaluation/generate-dataset?n_questions=${datasetSize}`
+        `${API_URL}/api/evaluation/generate-dataset?n_questions=${testCaseCount}`
       )
       
       const dataset = response.data.dataset
@@ -79,10 +79,17 @@ function AdminPanel() {
 
     try {
       setLoading(true)
-      const response = await axios.post(`${API_URL}/api/evaluation/run`)
-      setEvaluationResult(response.data)
+      const response = await axios.post(
+      `${API_URL}/api/evaluation/run`,
+      null, 
+      {
+        params: { n_questions: testCaseCount }  
+      }
+    )
+      //setEvaluationResult(response.data)
       
-      const r = response.data
+      const r = response.data.results
+      setEvaluationResult(r)
       alert(
         `✅ Evaluation Complete!\n\n` +
         `📊 Results (0-100%, higher is better):\n` +
@@ -277,20 +284,20 @@ function AdminPanel() {
                 Test Cases to Generate:
                 <input 
                   type="number" 
-                  value={datasetSize}
-                  onChange={(e) => setDatasetSize(parseInt(e.target.value))}
+                  value={testCaseCount}
+                  onChange={(e) => setTestCaseCount(parseInt(e.target.value))}
                   min="5"
                   max="100"
                   disabled={loading}
                 />
               </label>
-              <button 
+              {/*<button 
                 className="admin-btn primary"
                 onClick={handleGenerateDataset}
                 disabled={loading}
               >
                 📊 Generate Test Dataset
-              </button>
+              </button>*/}
             </div>
 
             <div className="control-item">

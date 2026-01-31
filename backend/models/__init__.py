@@ -3,6 +3,8 @@ from typing import List, Optional
 
 class QueryRequest(BaseModel):
     query: str
+    conversation_id: str | None = None
+    mode: str | None = None
 
 class QueryResponse(BaseModel):
     answer: str
@@ -12,6 +14,7 @@ class QueryResponse(BaseModel):
     retrieval_score: float
     response_time_ms: float
     metadata: dict
+    conversation_id: str | None = None
 
 class DocumentMetadata(BaseModel):
     source: str
@@ -33,3 +36,6 @@ class MetricsResponse(BaseModel):
     p99_latency_ms: float
     error_rate: float
     cache_hit_rate: float
+    avg_retrieval_score: float
+    uptime_seconds: float
+    mode_breakdown: dict | None = None

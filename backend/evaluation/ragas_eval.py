@@ -4,7 +4,8 @@ import structlog
 import json
 import random
 from typing import List, Dict
-
+from services.agent import rag_agent
+import traceback
 logger = structlog.get_logger()
 
 class RAGASEvaluator:
@@ -177,17 +178,8 @@ Score:"""
             logger.warning("recall_parse_error", response=response)
             return 0.5
     
-    async def evaluate_system(self, test_cases: List[Dict], rag_system) -> Dict:
-        """
-        Evaluate RAG system on test cases
-        
-        Args:
-            test_cases: List of test cases
-            rag_system: RAG agent instance
-            
-        Returns:
-            Evaluation metrics
-        """
+    async def evaluate_system(self, test_cases: List[Dict]) -> Dict:
+        """Evaluate RAG system on test cases"""
         logger.info("system_evaluation_start", num_cases=len(test_cases))
         
         results = {
@@ -199,25 +191,34 @@ Score:"""
         
         for case in test_cases:
             try:
+                # ✅ DÜZELT: case içinde "question" var, "query" yok
+                question = case.get("question", "") or case.get("query") # ← EKLE!
+                ground_truth = case.get("ground_truth", "")  or case.get("answer")# ← EKLE!
+                
+                if not question or not ground_truth:
+                    logger.warning("invalid_test_case", case=case)
+                    continue
+                
                 # Get system answer
-                response = await rag_system.run(case["question"])
+                response = await rag_agent.run(question)  # ← question kullan
+                #response = await rag_agent.run({"query": question})
                 
                 # Evaluate
                 faithfulness = await self.evaluate_faithfulness(
-                    case["question"],
+                    question,  # ← question
                     response["answer"],
-                    "\n".join(response["sources"])
+                    "\n".join(response["sources"]) if response["sources"] else ""
                 )
                 
                 relevancy = await self.evaluate_answer_relevancy(
-                    case["question"],
+                    question,  # ← question
                     response["answer"]
                 )
                 
                 recall = await self.evaluate_context_recall(
-                    case["question"],
-                    case["ground_truth"],
-                    "\n".join(response["sources"])
+                    question,  # ← question
+                    ground_truth,  # ← ground_truth
+                    "\n".join(response["sources"]) if response["sources"] else ""
                 )
                 
                 results["faithfulness_scores"].append(faithfulness)
@@ -225,8 +226,8 @@ Score:"""
                 results["recall_scores"].append(recall)
                 
                 results["cases"].append({
-                    "question": case["question"],
-                    "ground_truth": case["ground_truth"],
+                    "question": question,
+                    "ground_truth": ground_truth,
                     "system_answer": response["answer"],
                     "faithfulness": faithfulness,
                     "relevancy": relevancy,
@@ -234,14 +235,17 @@ Score:"""
                 })
                 
                 logger.info("case_evaluated",
-                           question=case["question"][:50],
-                           faithfulness=faithfulness,
-                           relevancy=relevancy,
-                           recall=recall)
+                        question=question[:50],
+                        faithfulness=faithfulness,
+                        relevancy=relevancy,
+                        recall=recall)
                 
             except Exception as e:
+                error_trace = traceback.format_exc()
+                logger.error("FULL_TRACEBACK", trace=error_trace) 
+                
                 logger.error("evaluation_error",
-                            question=case["question"][:50],
+                            question=case.get("question", "unknown")[:50],
                             error=str(e))
                 continue
         

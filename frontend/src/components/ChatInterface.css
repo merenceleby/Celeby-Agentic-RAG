@@ -75,6 +75,76 @@
   cursor: pointer;
 }
 
+.mode-group {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.mode-select-wrapper {
+  flex: 1;
+  min-width: 220px;
+}
+
+.mode-select-wrapper label {
+  display: block;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.mode-select-wrapper select {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.6rem 0.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #ffffff;
+  color: #2d3748;
+  transition: border-color 0.3s ease;
+}
+
+.mode-select-wrapper select option {
+  color: #2d3748;
+}
+
+.mode-select-wrapper select:focus {
+  border-color: #667eea;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.mode-description {
+  flex: 1;
+  min-width: 220px;
+  font-size: 0.9rem;
+  color: #2d3748;
+  background: #ffffff;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.history-loading {
+  text-align: center;
+  padding: 1rem 0;
+  color: #718096;
+  font-weight: 600;
+}
+
+.empty-chat-state {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #718096;
+}
+
+.empty-chat-state .hint {
+  color: #a0aec0;
+  font-size: 0.9rem;
+  margin-top: 0.35rem;
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -295,8 +365,11 @@
   padding: 0.4rem 0.8rem;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 0.95rem;
   transition: all 0.3s ease;
+  color: #2d3748;
+  background: #ffffff;
+  font-weight: 600;
 }
 
 .feedback-btn:hover {

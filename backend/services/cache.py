@@ -77,6 +77,19 @@ class CacheService:
             logger.error("cache_delete_error", key=key, error=str(e))
             return False
     
+    def clear(self) -> bool:
+        """Clear all cache entries"""
+        if not self.client:
+            return False
+        
+        try:
+            self.client.flushdb()
+            logger.info("cache_cleared", message="All cache entries deleted")
+            return True
+        except Exception as e:
+            logger.error("cache_clear_error", error=str(e))
+            return False
+    
     def clear_pattern(self, pattern: str) -> int:
         """Clear all keys matching pattern"""
         if not self.client:

@@ -161,3 +161,9 @@
     max-height: none;
   }
 }
+
+@media (max-width: 1280px) {
+  .documents-list {
+    grid-column: span 2;
+  }
+}

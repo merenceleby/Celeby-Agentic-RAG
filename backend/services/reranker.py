@@ -20,6 +20,7 @@ class RerankerService:
                    status="ready")
     
     def rerank(self, query: str, documents: List[str], top_k: int = None, threshold: float = -5.0) -> List[Tuple[str, float]]:
+
         """
         Re-rank documents using cross-encoder
         

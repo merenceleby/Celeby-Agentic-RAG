@@ -23,7 +23,10 @@ class LLMService:
         payload = {
             "model": self.model,
             "prompt": prompt,
-            "stream": False
+            "stream": False,
+            "temperature": 0.0,  
+            "top_p": 0.1,   
+            "repeat_penalty": 1.1 
         }
         
         if system_prompt:
@@ -51,7 +54,10 @@ class LLMService:
         payload = {
             "model": self.model,
             "prompt": prompt,
-            "stream": True
+            "stream": True,
+            "temperature": 0.0, 
+            "top_p": 0.1,     
+            "repeat_penalty": 1.1
         }
         
         if system_prompt:
@@ -74,24 +80,42 @@ class LLMService:
             logger.error("llm_stream_error", error=str(e))
             raise
     
+
     async def check_answer_quality(self, question: str, answer: str, context: str) -> dict:
-        """Validate answer quality against context"""
-        prompt = f"""Given this context:
-{context}
-
-Question: {question}
-Answer: {answer}
-
-Evaluate if this answer is accurate and well-supported by the context.
-Respond ONLY with valid JSON in this exact format:
-{{"is_correct": true, "reason": "explanation here"}}
-or
-{{"is_correct": false, "reason": "explanation here"}}"""
+        """Validate answer quality against context - STRICT VERSION"""
         
+        prompt = f"""You are a STRICT fact-checker. Your job is to verify if an answer is ONLY based on the given context.
+
+        Context:
+        {context[:2000]}
+
+        Question: {question}
+        Answer: {answer}
+
+        VALIDATION RULES:
+        1. Check if EVERY fact in the answer exists in the context
+        2. Check if answer uses information NOT in context (hallucination)
+        3. Check if answer makes assumptions beyond context
+        4. Check if answer is relevant to the question
+
+        Respond ONLY with valid JSON:
+        {{"is_correct": true/false, "reason": "specific reason"}}
+
+        Mark as FALSE if:
+        - Answer contains ANY information not in context
+        - Answer makes assumptions or inferences
+        - Answer uses general knowledge
+        - Answer is off-topic
+
+        Mark as TRUE only if:
+        - Every fact is directly from context
+        - No external information added
+        - Relevant to question
+        """
+
         response = await self.generate(prompt)
         
         try:
-            # Clean response and extract JSON
             cleaned = response.strip()
             if "```json" in cleaned:
                 cleaned = cleaned.split("```json")[1].split("```")[0].strip()
@@ -101,15 +125,15 @@ or
             result = json.loads(cleaned)
             
             logger.info("answer_quality_check",
-                       is_correct=result.get("is_correct", True),
-                       reason=result.get("reason", ""))
+                    is_correct=result.get("is_correct", True),
+                    reason=result.get("reason", ""))
             
             return result
         except Exception as e:
             logger.warning("answer_quality_parse_error",
-                          error=str(e),
-                          response=response[:200])
-            return {"is_correct": True, "reason": "Unable to parse validation"}
+                        error=str(e),
+                        response=response[:200])
+            return {"is_correct": False, "reason": f"Validation failed: {str(e)}"}
 
 # Singleton instance
 llm_service = LLMService()

@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     
     # Database Config
     CHROMA_DB_PATH: str = "/app/chroma_db"
+    METRICS_DB_PATH: str = "/app/metrics.db"
+    CHAT_HISTORY_DB_PATH: str = "/app/chat_history.db"
     
     # Redis Config
     REDIS_HOST: str = "redis"
@@ -19,12 +21,12 @@ class Settings(BaseSettings):
     RERANKER_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     
     # RAG Parameters - OPTIMIZED FOR QUALITY
-    CHUNK_SIZE: int = 512
-    CHUNK_OVERLAP: int = 100  # Increased for better context
-    TOP_K_RETRIEVAL: int = 15  # Reduced to focus on best matches
-    TOP_K_RERANK: int = 5
+    CHUNK_SIZE: int = 768
+    CHUNK_OVERLAP: int = 200  # Increased for better context
+    TOP_K_RETRIEVAL: int = 20  # Reduced to focus on best matches
+    TOP_K_RERANK: int = 7
     TOP_K_BM25: int = 10
-    RERANK_THRESHOLD: float = -2.0  # Stricter threshold
+    RERANK_THRESHOLD: float = -5.0  # Stricter threshold -2.0 to -5.00
     
     # Agent Parameters - MODE BASED
     FAST_MODE: bool = os.getenv("FAST_MODE", "false").lower() == "true"

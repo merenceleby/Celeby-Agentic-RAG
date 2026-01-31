@@ -62,12 +62,19 @@ body {
 .app-container {
   flex: 1;
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 280px minmax(0, 1fr) 320px;
   gap: 2rem;
   padding: 2rem;
   max-width: 1600px;
   margin: 0 auto;
   width: 100%;
+  align-items: flex-start;
+}
+
+@media (max-width: 1280px) {
+  .app-container {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 1024px) {
