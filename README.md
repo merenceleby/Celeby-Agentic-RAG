@@ -1279,7 +1279,7 @@ This project is licensed under the **Apache License 2.0** - see the [LICENSE](LI
 **Muhammed Eren Çelebi**
 
 - GitHub: [@merenceleby](https://github.com/merenceleby)
-- LinkedIn: [linkedin.com/in/merenceleby](https://linkedin.com/in/merenceleby)
+- LinkedIn: [linkedin.com/in/merencelebi](https://linkedin.com/in/merencelebi)
 - Email: muhammederencelebii@gmail.com
 
 ---
