@@ -314,8 +314,8 @@ graph LR
 #### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/merenceleby/celeby-agentic-rag.git
-cd celeby-agentic-rag
+git clone https://github.com/merenceleby/Celeby-Agentic-RAG.git
+cd Celeby-Agentic-RAG
 ```
 
 #### 2. Start Services
