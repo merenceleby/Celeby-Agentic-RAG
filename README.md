@@ -2,8 +2,6 @@
 
 <div align="center">
 
-![Celeby Agentic RAG](docs/images/banner.png)
-
 **Production-ready Agentic RAG system with LangGraph orchestration, self-correction, hybrid search, and intelligent re-ranking**
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -215,7 +213,9 @@ graph LR
 ## 📸 Screenshots
 
 ### 🎯 Main Chat Interface
-![Chat Interface](docs/images/chat_interface.png)
+
+<img width="1919" height="921" alt="celeby agentic rag" src="https://github.com/user-attachments/assets/8bfe81f7-9305-45fe-84c3-b059da75b989" />
+
 
 **Key Features Shown:**
 - **Response Modes Dropdown**: Choose between Quality (self-correcting), Fast (streaming), or Direct LLM
@@ -230,7 +230,9 @@ graph LR
 ---
 
 ### 📊 System Performance Metrics
-![Admin Panel](docs/images/admin_panel.png)
+
+<img width="1919" height="924" alt="admin 1" src="https://github.com/user-attachments/assets/0905390a-2834-4910-9e24-287a51eca498" />
+
 
 **Real-time Monitoring Dashboard:**
 - **Total Queries**: 45 questions processed
@@ -246,7 +248,9 @@ graph LR
 ---
 
 ### 👥 User Feedback System
-![Feedback](docs/images/feedback.png)
+
+<img width="1793" height="522" alt="feedbacks" src="https://github.com/user-attachments/assets/ef33f264-b762-4fac-802f-37e4d475cd51" />
+
 
 **Quality Assurance Features:**
 - **Like/Dislike Buttons**: User ratings on every answer
@@ -260,7 +264,10 @@ graph LR
 ---
 
 ### 🎓 RAGAS Evaluation Results
-![Evaluation](docs/images/ragas_results.png)
+
+<img width="1496" height="830" alt="my test result" src="https://github.com/user-attachments/assets/2c1cc14a-6f2a-40bc-b63b-a1148b7983ed" />
+
+
 
 **Automated Quality Assessment:**
 - **Faithfulness: 50.0%** - Answers grounded in retrieved sources
