@@ -15,7 +15,7 @@ class AgentState(Dict):
     pass
 
 class RAGAgent:
-    """Self-correcting RAG agent with LangGraph"""
+    """Celeby Agentic RAG"""
     
     def __init__(self):
         self.graph = self._build_graph()

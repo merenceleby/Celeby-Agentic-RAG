@@ -21,7 +21,7 @@ logging.basicConfig(
 logger = structlog.get_logger()
 
 app = FastAPI(
-    title="Self-Correcting RAG Agent",
+    title="Celeby Agentic RAG",
     description="Advanced RAG system with self-correction, hybrid search, and re-ranking",
     version="2.0.0"
 )
@@ -51,7 +51,7 @@ async def shutdown_event():
 def read_root():
     return {
         "status": "running",
-        "name": "Self-Correcting RAG Agent",
+        "name": "Celeby Agentic RAG",
         "version": "2.0.0"
     }
 
