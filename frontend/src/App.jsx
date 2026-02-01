@@ -23,16 +23,21 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🤖 Self-Correcting RAG Agent</h1>
+        <h1>🤖 Celeby Agentic RAG 🤖</h1>
         {/* <h1>🤖 Celeby Agentic RAG 🤖</h1> */}
-        <p className="subtitle">Advanced RAG with Query Rewriting, Hybrid Search & Re-ranking</p>
-        <div className="tech-stack">
+        <p className="subtitle">
+          <span>Celeby did</span>
+          <span>Celeby money</span>
+          <span>Celeby blood</span>
+        </p>
+        <p className="normal-description">Advanced RAG with Query Rewriting, Hybrid Search & Re-ranking</p>
+        {/* <div className="tech-stack">
           <span className="tech-badge">Phi-3 Mini</span>
           <span className="tech-badge">LangGraph</span>
           <span className="tech-badge">ChromaDB</span>
           <span className="tech-badge">Cross-Encoder</span>
           <span className="tech-badge">BM25</span>
-        </div>
+        </div> */}
       </header>
       
       <div className="app-container">

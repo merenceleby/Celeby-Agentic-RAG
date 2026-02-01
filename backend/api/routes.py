@@ -392,14 +392,24 @@ async def upload_document(file: UploadFile = File(...)):
         cache_service.clear()
         logger.info("cache_cleared_after_upload")
         
+        verify_count = len(vector_store.collection.get(
+            where={"source": file.filename}
+        )['ids'])
+        
         logger.info("upload_complete", 
                    filename=file.filename,
-                   chunks=result["chunks"])
+                   chunks=result["chunks"],
+                   verified_chunks=verify_count)
+        if verify_count != result["chunks"]:
+            logger.error("indexing_mismatch",
+                        expected=result["chunks"],
+                        actual=verify_count)
         
         return {
             "message": f"Document '{file.filename}' uploaded and indexed successfully",
             "filename": file.filename,
-            "chunks": result["chunks"]
+            "chunks": result["chunks"],
+            "verified": verify_count
         }
         
     except Exception as e:
@@ -523,9 +533,10 @@ async def get_documents():
         logger.error("get_documents_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.delete("/documents/{filename}")
 async def delete_document(filename: str):
-    """Delete a document and remove from vector store"""
+    """Delete document"""
     try:
         from urllib.parse import unquote
         
@@ -533,50 +544,46 @@ async def delete_document(filename: str):
         file_path = f"/app/data/documents/{filename}"
         
         logger.info("delete_document_start", filename=filename)
-        
-        # Delete from vector store (by source metadata)
-        try:
-            # Get all IDs for this document
-            results = vector_store.collection.get(
-                where={"source": filename}
-            )
-            
-            if results and results['ids']:
-                # Delete by IDs
-                vector_store.collection.delete(ids=results['ids'])
-                logger.info("document_deleted_from_vectorstore", 
-                           filename=filename,
-                           chunks_deleted=len(results['ids']))
-            else:
-                logger.warning("no_chunks_found_in_vectorstore", filename=filename)
                 
-        except Exception as e:
-            logger.error("vectorstore_delete_error", filename=filename, error=str(e))
-            raise HTTPException(status_code=500, detail=f"Failed to delete from vector store: {str(e)}")
+        results = vector_store.collection.get(where={"source": filename})
         
-        # CRITICAL: Clear cache and rebuild indexes
-        cache_service.clear()
-        logger.info("cache_cleared_after_delete")
+        if results and results['ids']:
+            vector_store.collection.delete(ids=results['ids'])
+            logger.info("vectorstore_deleted",
+                       filename=filename,
+                       chunks=len(results['ids']))
         
-        # Rebuild BM25 index
+        # 2. BM25 rebuild
         vector_store._rebuild_bm25_index()
         logger.info("bm25_rebuilt_after_delete")
         
-        # Delete file from disk
+        # 3. Cache clear
+        cache_service.clear()
+        logger.info("cache_cleared_after_delete")
+        
+        # 4. delete from disk
         if os.path.exists(file_path):
             os.remove(file_path)
-            logger.info("document_file_deleted", filename=filename)
-        else:
-            logger.warning("file_not_found_on_disk", filename=filename)
+            logger.info("file_deleted", filename=filename)
+        
+        #  Verify deletion
+        verify_results = vector_store.collection.get(where={"source": filename})
+        remaining = len(verify_results['ids']) if verify_results else 0
+        
+        if remaining > 0:
+            logger.error("deletion_incomplete",
+                        filename=filename,
+                        remaining_chunks=remaining)
         
         return {
             "message": f"Document '{filename}' deleted successfully",
             "filename": filename,
-            "chunks_removed": len(results['ids']) if results and results['ids'] else 0
+            "chunks_removed": len(results['ids']) if results else 0,
+            "verified_deleted": remaining == 0
         }
         
     except Exception as e:
-        logger.error("delete_document_error", filename=filename, error=str(e))
+        logger.error("delete_error", filename=filename, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/feedback")
@@ -667,18 +674,29 @@ async def run_evaluation(n_questions: int = 20, test_cases: list = None):
         logger.info("run_evaluation_request")
         
         # If no test cases provided, generate them
-        #if not test_cases:
         test_cases = await ragas_evaluator.generate_test_dataset(n_questions)
         
         # Run evaluation
         results = await ragas_evaluator.evaluate_system(test_cases)
         
         logger.info("run_evaluation_complete")
+        test_questions = [
+            {
+                "id": (case.get("id") if isinstance(case, dict) else getattr(case, "id", f"test_{i}")),
+                "question": (case.get("question") if isinstance(case, dict) else getattr(case, "question", "")),
+                "ground_truth": case.get("ground_truth", ""),
+                "status": case.get("status", "success")
+            }
+            for i, case in enumerate(test_cases)
+        ]
         formatted_results = {
         "avg_faithfulness": results.get("avg_faithfulness", 0), 
         "avg_relevancy": results.get("avg_relevancy", 0),
         "avg_recall": results.get("avg_recall", 0), 
-        "num_cases": len(test_cases)
+        "num_cases": len(test_cases),
+        "num_failed": results.get("num_failed", 0), 
+        "test_questions": test_questions,
+        "failed_cases": results.get("failed_cases", []) 
         }
         
         # Add explanations

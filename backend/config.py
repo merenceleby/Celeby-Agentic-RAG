@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     RERANKER_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     
     # RAG Parameters - OPTIMIZED FOR QUALITY
-    CHUNK_SIZE: int = 768
-    CHUNK_OVERLAP: int = 200  # Increased for better context
+    CHUNK_SIZE: int = 1024  
+    CHUNK_OVERLAP: int = 256  # Increased for better context
     TOP_K_RETRIEVAL: int = 20  # Reduced to focus on best matches
     TOP_K_RERANK: int = 7
     TOP_K_BM25: int = 10

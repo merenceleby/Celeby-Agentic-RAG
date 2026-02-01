@@ -68,21 +68,18 @@ class VectorStore:
         logger.info("indexing_document", file=filename)
         
         try:
-            # Extract text from PDF
-            text = self._extract_text_from_pdf(pdf_path)
+            pages_data = self._extract_text_from_pdf(pdf_path)
             
-            if not text or len(text.strip()) < 50:
+            if not pages_data:
                 logger.warning("document_too_short", file=filename)
                 raise ValueError("Document content too short or empty")
             
-            # Create chunks
-            chunks_data = self._create_chunks(text, filename)
+            chunks_data = self._create_chunks(pages_data, filename)
             
             if not chunks_data:
                 logger.warning("no_chunks_created", file=filename)
                 raise ValueError("No chunks created from document")
             
-            # Prepare for ChromaDB
             ids = [chunk["id"] for chunk in chunks_data]
             documents = [chunk["text"] for chunk in chunks_data]
             metadatas = [chunk["metadata"] for chunk in chunks_data]
@@ -113,72 +110,72 @@ class VectorStore:
         except Exception as e:
             logger.error("index_document_error", file=filename, error=str(e))
             raise
-    
-    def _extract_text_from_pdf(self, pdf_path: str) -> str:
-        """Extract all text from PDF"""
+    def _extract_text_from_pdf(self, pdf_path: str) -> List[Tuple[int, str]]:
+        """Extract text preserving page numbers"""
         try:
             reader = PdfReader(pdf_path)
-            text_parts = []
+            pages_data = []  # List of (page_number, text) tuples
             
-            for page_num, page in enumerate(reader.pages):
+            for i, page in enumerate(reader.pages):
                 try:
-                    page_text = page.extract_text()
-                    if page_text.strip():
-                        text_parts.append(page_text)
+                    text = page.extract_text()
+                    if text and len(text.strip()) > 10:
+                        pages_data.append((i + 1, text))
                 except Exception as e:
-                    logger.warning("page_extract_error",
-                                 file=pdf_path,
-                                 page=page_num,
+                    logger.warning("page_extract_error", 
+                                 file=os.path.basename(pdf_path), 
+                                 page=i+1, 
                                  error=str(e))
                     continue
             
-            full_text = "\n\n".join(text_parts)
-            logger.info("pdf_text_extracted",
-                       file=os.path.basename(pdf_path),
-                       pages=len(reader.pages),
-                       chars=len(full_text))
+            logger.info("pdf_text_extracted", 
+                       file=os.path.basename(pdf_path), 
+                       total_pages=len(pages_data))
             
-            return full_text
+            return pages_data 
             
         except Exception as e:
             logger.error("pdf_read_error", file=pdf_path, error=str(e))
             raise
     
-    def _create_chunks(self, text: str, filename: str) -> List[Dict]:
-        """Split text into overlapping chunks"""
-        words = text.split()
+    def _create_chunks(self, pages_data: List[Tuple[int, str]], filename: str) -> List[Dict]:
+        """Create chunks with page numbers in metadata"""
         chunks_data = []
         
         chunk_size = settings.CHUNK_SIZE
         chunk_overlap = settings.CHUNK_OVERLAP
         
-        for i in range(0, len(words), chunk_size - chunk_overlap):
-            chunk_words = words[i:i + chunk_size]
-            chunk_text = ' '.join(chunk_words)
+        for page_num, page_text in pages_data:
+            words = page_text.split()
             
-            if not chunk_text.strip():
+            if not words:
                 continue
             
-            # Add citation
-            chunk_id = f"{filename}_chunk_{len(chunks_data)}"
-            cited_chunk = f"[Source: {filename}]\n\n{chunk_text}"
-            
-            chunks_data.append({
-                "id": chunk_id,
-                "text": cited_chunk,
-                "metadata": {
-                    "source": filename,
-                    "chunk_index": len(chunks_data)
-                }
-            })
+            for i in range(0, len(words), chunk_size - chunk_overlap):
+                chunk_words = words[i:i + chunk_size]
+                
+
+                chunk_text = ' '.join(chunk_words)
+                
+                chunk_id = f"{filename}_p{page_num}_{len(chunks_data)}"
+                
+                cited_chunk = f"[Source: {filename}, Page: {page_num}]\n\n{chunk_text}"
+                
+                chunks_data.append({
+                    "id": chunk_id,
+                    "text": cited_chunk, 
+                    "metadata": {
+                        "source": filename,
+                        "page": page_num,   
+                        "chunk_index": len(chunks_data)
+                    }
+                })
         
-        logger.info("chunks_created",
-                   file=filename,
-                   chunks=len(chunks_data),
-                   avg_words=len(words) // max(len(chunks_data), 1))
+        logger.info("chunks_created", 
+                   file=filename, 
+                   chunks=len(chunks_data))
         
         return chunks_data
-    
     def _rebuild_bm25_index(self):
         """Rebuild BM25 index from ALL documents in ChromaDB"""
         logger.info("rebuilding_bm25_index")
@@ -239,7 +236,7 @@ class VectorStore:
         return {
             "documents": documents,
             "metadatas": metadatas,
-            "distances": distances
+            "distances": [max(0.0, min(1.0, 1.0 - dist)) for dist in distances]
         }
     
     def bm25_search(self, query_text: str, top_k: int = None) -> List[Tuple[str, float]]:

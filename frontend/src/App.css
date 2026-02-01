@@ -105,3 +105,27 @@ body {
     gap: 1rem;
   }
 }
+.subtitle {
+  display: flex;
+  justify-content: center;
+  gap: 25px;            
+  color: #00d2ff;     
+  font-weight: 500;
+  letter-spacing: 1px;  
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.subtitle span {
+  text-shadow: 0 0 8px rgba(0, 210, 255, 0.3);
+}
+
+.normal-description {
+  color: #444; 
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 10px;
+  font-weight: 400;
+  display: block; 
+}

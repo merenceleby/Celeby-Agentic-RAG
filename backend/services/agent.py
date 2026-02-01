@@ -179,11 +179,8 @@ Provide {desired_variations} variations, one per line, without numbering or bull
         5. NEVER say "based on my knowledge" or similar phrases
         6. If unsure, say you cannot find the information
 
-        OUTPUT FORMAT:
-        - Direct answer first
-        - Use facts from context word-for-word when possible
-        - Keep it concise
-        - No preamble like "Based on the context..."
+        
+
         """
 
         prompt = f"""Context from documents:
@@ -195,20 +192,7 @@ Provide {desired_variations} variations, one per line, without numbering or bull
 
         Answer:"""
 
-        system_prompt2 = """You are a PRECISE document Q&A assistant.
-
-        STRICT RULES:
-        1. Answer ONLY from the provided context
-        2. If info is NOT in context, say: "I cannot find this information in the provided documents."
-        3. NEVER use general knowledge
-        4. Quote specific facts when possible
-        5. Be concise but complete
-        6. Follow user's formatting requests (bullet points, short answer, etc.)
-
-        Context quality indicators:
-        - If context is unclear or contradictory, say so
-        - If context is partial, acknowledge limitations
-        """      
+             
         prompt = f"""Context from documents:
 {context}
 

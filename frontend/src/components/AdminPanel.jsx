@@ -10,6 +10,7 @@ function AdminPanel() {
   const [evaluationResult, setEvaluationResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [testCaseCount, setTestCaseCount] = useState(20)
+  const [testQuestions, setTestQuestions] = useState([])
 
   useEffect(() => {
     fetchAllData()
@@ -107,6 +108,7 @@ function AdminPanel() {
       setLoading(false)
     }
   }
+  
 
   const handleResetMetrics = async () => {
     if (!confirm('Reset all performance metrics?')) return
@@ -291,13 +293,7 @@ function AdminPanel() {
                   disabled={loading}
                 />
               </label>
-              {/*<button 
-                className="admin-btn primary"
-                onClick={handleGenerateDataset}
-                disabled={loading}
-              >
-                📊 Generate Test Dataset
-              </button>*/}
+
             </div>
 
             <div className="control-item">
@@ -321,6 +317,11 @@ function AdminPanel() {
           {evaluationResult && (
             <div className="evaluation-results">
               <h3>📈 Latest Evaluation Results</h3>
+              {evaluationResult.num_failed > 0 && (
+              <div className="failed-warning-banner">
+                ⚠️ {evaluationResult.num_failed} test case(s) failed during evaluation
+              </div>
+            )}
               <div className="results-grid">
                 <div className="result-card">
                   <div className="result-label">Faithfulness</div>
@@ -359,6 +360,53 @@ function AdminPanel() {
                   </div>
                 </div>
               </div>
+              {evaluationResult.failed_cases && evaluationResult.failed_cases.length > 0 && (
+              <details className="failed-cases-section">
+                <summary className="failed-cases-summary">
+                  ❌ View Failed Cases ({evaluationResult.failed_cases.length})
+                </summary>
+                <div className="failed-cases-list">
+                  {evaluationResult.failed_cases.map((fail, idx) => (
+                    <div key={idx} className="failed-case-item">
+                      <div className="failed-case-header">
+                        <span className="failed-icon">❌</span>
+                        <span className="failed-id">{fail.case_id}</span>
+                      </div>
+                      <div className="failed-case-body">
+                        <div className="failed-question">
+                          <strong>Question:</strong> {fail.question}
+                        </div>
+                        <div className="failed-error">
+                          <strong>Error:</strong> {fail.error}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+              {evaluationResult.test_questions && evaluationResult.test_questions.length > 0 && (
+            <details className="test-questions-section">
+              <summary className="test-questions-summary">
+                📝 View Test Questions ({evaluationResult.test_questions.length})
+              </summary>
+              <div className="test-questions-list">
+                {evaluationResult.test_questions.map((q, idx) => (
+                  <div key={q.id || idx} className="test-question-card">
+                    <div className="question-header">
+                      <span className="question-number">Question {idx + 1}</span>
+                      <span className="question-id">{q.id}</span>
+                    </div>
+                    <div className="question-content">
+                      <div className="question-text">
+                        <strong>Question:</strong> {q.question}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
               
               <div className="evaluation-summary">
                 <strong>💡 What do these scores mean?</strong>
