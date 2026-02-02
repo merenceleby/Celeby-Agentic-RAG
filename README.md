@@ -419,22 +419,12 @@ curl http://localhost:8000/api/metrics
 
 ---
 
+
 ## 🧪 Evaluation
-
-### Generate Test Dataset
-
+### Run Evaluation (auto-generates test questions from your documents)
 ```bash
-curl -X POST "http://localhost:8000/api/evaluation/generate-dataset?n_questions=50"
+curl -X POST "http://localhost:8000/api/evaluation/run?n_questions=50"
 ```
-
-Creates `testset.json` with synthetic Q&A pairs.
-
-### Run RAGAS Evaluation
-
-```bash
-curl -X POST "http://localhost:8000/api/evaluation/run"
-```
-
 **Metrics**:
 - **Faithfulness**: Answer accuracy vs context (target >80%)
 - **Relevancy**: How well answer addresses question (target >80%)
@@ -463,7 +453,7 @@ curl -X POST "http://localhost:8000/api/evaluation/run"
 celeby-agentic-rag/
 ├── 📄 docker-compose.yml        # Multi-service orchestration
 ├── 📄 LICENSE                   # Apache 2.0
-├── 📄 README.md                 # This file
+├── 📄 README.md                
 │
 ├── 📂 backend/
 │   ├── 📄 Dockerfile
@@ -506,27 +496,27 @@ celeby-agentic-rag/
 │       └── metrics.db           # Performance data
 │
 ├── 📂 frontend/
-│   ├── 📄 Dockerfile
-│   ├── 📄 package.json
-│   ├── 📄 vite.config.js
-│   ├── 📄 index.html
-│   │
-│   └── 📂 src/
-│       ├── 📄 App.jsx           # Main app component
-│       ├── 📄 App.css
-│       ├── 📄 main.jsx
-│       ├── 📄 index.css
-│       │
-│       └── 📂 components/
-│           ├── 📄 ChatInterface.jsx       # Main chat UI
-│           ├── 📄 ChatSidebar.jsx         # Chat history
-│           ├── 📄 DocumentsList.jsx       # Document manager
-│           ├── 📄 AdminPanel.jsx          # Metrics dashboard
-│           ├── 📄 MetricsDashboard.jsx    # Performance charts
-│           └── 📄 (corresponding .css files)
-│
-└── 📂 docs/
-    └── 📂 images/               # Screenshots for README
+   ├── 📄 Dockerfile
+   ├── 📄 package.json
+   ├── 📄 vite.config.js
+   ├── 📄 index.html
+   │
+   └── 📂 src/
+       ├── 📄 App.jsx           # Main app component
+       ├── 📄 App.css
+       ├── 📄 main.jsx
+       ├── 📄 index.css
+       │
+       └── 📂 components/
+           ├── 📄 ChatInterface.jsx       # Main chat UI
+           ├── 📄 ChatSidebar.jsx         # Chat history
+           ├── 📄 DocumentsList.jsx       # Document manager
+           ├── 📄 AdminPanel.jsx          # Metrics dashboard
+           ├── 📄 MetricsDashboard.jsx    # Performance charts
+           └── 📄 (corresponding .css files)
+
+
+    
 ```
 
 ---
